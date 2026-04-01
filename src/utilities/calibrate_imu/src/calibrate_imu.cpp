@@ -171,6 +171,7 @@ int main(int argc, char** argv)
 
     unitree_api::msg::Request req;
     SportClient sport_req;
+    int req_id = 0;
 
     bool file_written = false;
     
@@ -189,8 +190,9 @@ int main(int argc, char** argv)
             pubSpeed->publish(cmd_vel);
 
             sport_req.Move(req, 0, 0, 0);
+            req.header.identity.id = req_id++;
             pubGo2Request->publish(req);
-            
+
             state = 0;
         }
         else if (seconds >= 2 && seconds <15){
@@ -200,6 +202,7 @@ int main(int argc, char** argv)
             pubSpeed->publish(cmd_vel);
 
             sport_req.StopMove(req);
+            req.header.identity.id = req_id++;
             pubGo2Request->publish(req);
 
             if (seconds >= 5){
@@ -213,6 +216,7 @@ int main(int argc, char** argv)
             pubSpeed->publish(cmd_vel);
 
             sport_req.Move(req, cmd_vel.twist.linear.x, cmd_vel.twist.linear.y, cmd_vel.twist.angular.z);
+            req.header.identity.id = req_id++;
             pubGo2Request->publish(req);
 
             state = 2;
@@ -224,6 +228,7 @@ int main(int argc, char** argv)
             pubSpeed->publish(cmd_vel);
 
             sport_req.StopMove(req);
+            req.header.identity.id = req_id++;
             pubGo2Request->publish(req);
 
             state = 3;
