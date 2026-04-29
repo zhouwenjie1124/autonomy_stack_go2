@@ -18,7 +18,7 @@
     <param name="multicast_iface" value="enp3s0"/> 
   </node> -->
 
-  <include file="$(find-pkg-share point_lio_unilidar)/launch/mapping_utlidar.launch">
+  <include file="$(find-pkg-share point_lio_unilidar)/launch/mapping_utlidar_onboard_imu.launch">
     <arg name="rviz" value="false"/>
   </include>
 

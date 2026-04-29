@@ -1,6 +1,6 @@
 /**:
     ros__parameters:
-        use_sim_time: false
+        use_sim_time: true
 
         use_imu_as_input: true
         runtime_pos_log_enable: false
@@ -9,8 +9,8 @@
         filter_size_map_min: 0.2
 
         common:
-            lid_topic: "/utlidar/transformed_cloud" 
-            imu_topic: "/utlidar/transformed_imu" # "/utlidar/transformed_imu" 
+            lid_topic: "/utlidar/cloud_synced" 
+            imu_topic: "/lowstate/imu" # "/utlidar/transformed_imu" 
             con_frame: false # true: if you need to combine several LiDAR frames into one
             con_frame_num: 1 # the number of frames combined
             cut_frame: false # true: if you need to cut one LiDAR frame into several subframes
@@ -27,11 +27,11 @@
         mapping:
             imu_en: true
             start_in_aggressive_motion: false # if true, a preknown gravity should be provided in following gravity_init
-            extrinsic_est_en: false # for aggressive motion, set this variable false
+            extrinsic_est_en: true # for aggressive motion, set this variable false
             imu_time_inte: 0.01 # = 1 / frequency of IMU
             satu_acc: 30.0 # the saturation value of IMU's acceleration. not related to the units
             satu_gyro: 35.0 # the saturation value of IMU's angular velocity. not related to the units
-            acc_norm: 9.81 # 1.0 for g as unit, 9.81 for m/s^2 as unit of the IMU's acceleration
+            acc_norm: 1.0 # 1.0 for g as unit, 9.81 for m/s^2 as unit of the IMU's acceleration
             lidar_meas_cov: 0.01 # 0.001
             acc_cov_output: 500.0
             gyr_cov_output: 1000.0 
@@ -48,16 +48,16 @@
             gravity_align: false # true to align the z axis of world frame with the direction of gravity, and the gravity direction should be specified below
             gravity: [0.0, 0.0, 0.0] # [0.0, 9.810, 0.0] # gravity to be aligned
             gravity_init: [0.0, 0.0, 0.0] # [0.0, 9.810, 0.0] # # preknown gravity in the first IMU body frame, use when imu_en is false or start from a non-stationary state
-            
-            # transform from imu to lidar
-            extrinsic_T: [ 0.007698, 0.014655, -0.00667] # ulhk # [-0.5, 1.4, 1.5] # utbm
-            # extrinsic_R: [ -0.96551, 0, 0.26035,
-            #                 0, 1, 0,
-            #                 -0.26035, 0, -0.96551 ] # ulhk 4 utbm 3
-            extrinsic_R: [  1.0, 0.0, 0.0,
-                            0.0, 1.0, 0.0,
-                            0.0, 0.0, 1.0 ]
 
+            # transform from imu to lidar
+            #xtrinsic_T: [ 0.3370, 0.0000, -0.02] # ulhk # [-0.5, 1.4, 1.5] # utbm
+            extrinsic_T: [ -0.042318, -0.186762, -0.247313] 
+            # extrinsic_R: [ -0.96551, 0.0, 0.26035,
+            #                 0.0, 1.0, 0.0,
+            #                 -0.26035, 0.0, -0.96551 ]
+            extrinsic_R: [  0.0, -0.926, 0.376575,
+                -0.902291, -0.162370, -0.399383,
+                0.431127, -0.339771, -0.835874 ]
         odometry: 
             publish_odometry_without_downsample: true  
 
@@ -69,4 +69,5 @@
         pcd_save:
             pcd_save_en: false       # save map to pcd file
             interval: -1            # how many LiDAR frames saved in each pcd file; 
-                                        # -1 : all frames will be saved in ONE pcd file, may lead to memory crash when having too much frames.
+                                        # -1 : all frames will be saved in ONE pcd file, may lead to memory crash when having too much frames.          
+    
