@@ -1,0 +1,60 @@
+laserMapping:
+  ros__parameters:
+    prop_at_freq_of_imu: true         # 是否按 IMU 频率做状态传播；true 时用更高频率的 IMU 传播状态，通常时序更平滑
+    use_imu_as_input: false           # 是否将 IMU 作为外部输入源直接驱动系统；一般保持 false，走内部 LiDAR-IMU 融合流程
+    check_satu: true                  # 是否检查 IMU 是否接近饱和；开启后可在大运动或异常数据下做保护
+    init_map_size: 10                 # 初始地图缓存/网格尺寸参数；影响系统初始化阶段的局部地图范围
+    space_down_sample: true           # 是否对空间点云做降采样；开启可明显减轻后端计算负担
+    point_filter_num: 2               # 点云抽样步长；1 表示不过滤，2 表示隔 1 个点取 1 个，值越大计算越省但细节越少
+    filter_size_surf: 0.2             # 当前帧点云体素降采样分辨率，单位 m；越大点越少、实时性越好、细节越少
+    filter_size_map: 0.1              # 地图点云体素降采样分辨率，单位 m；越大地图更稀疏、匹配更快
+    cube_side_length: 1000.0          # 局部地图立方体边长，单位 m；决定维护的地图空间范围
+    runtime_pos_log_enable: false     # 是否在运行时输出位姿日志到文件；调试时可开，正常运行通常关闭
+    common:
+      lid_topic: "/livox/lidar"       # LiDAR 点云话题名
+      imu_topic: "/livox/imu"         # IMU 话题名
+      con_frame: false                # 是否将多帧点云拼接后再处理；开启后点更密，但延迟通常更高
+      con_frame_num: 1                # 拼接帧数；仅在 con_frame=true 时生效
+      cut_frame: false                # 是否按固定时间切分点云帧；部分雷达/驱动需要，Livox 一般依赖原始帧
+      cut_frame_time_interval: 0.1    # 切帧时间间隔，单位 s；10Hz LiDAR 常见取 0.1
+      time_lag_imu_to_lidar: 0.0      # IMU 到 LiDAR 的时间偏移，单位 s；代码使用 imu_time_corrected = imu_time_raw - 该值
+    preprocess:
+      lidar_type: 1                   # LiDAR 类型编号；1 表示 Livox/AVIA 路径，决定预处理和字段解析方式
+      scan_line: 4                    # 雷达线数/通道数；对 Livox Mid360 这里沿用工程默认值
+      timestamp_unit: 3               # 每点时间戳单位；0=s，1=ms，2=us，3=ns
+      blind: 0.5                      # 近距离盲区半径，单位 m；距离小于该值的点会被滤除
+    mapping:
+      imu_en: true                    # 是否启用 IMU 融合；Point-LIO 正常工作通常应开启
+      start_in_aggressive_motion: false  # 是否允许系统在激烈运动状态下启动；关闭可降低初始化失败概率
+      extrinsic_est_en: false         # 是否在线估计 LiDAR-IMU 外参；外参已知时建议关闭以提升稳定性
+      imu_time_inte: 0.005            # IMU 积分时间分辨率/积分步长，单位 s；影响传播精度与计算量
+      satu_acc: 3.0                   # 加速度饱和检测阈值相关参数；用于识别异常 IMU 加速度
+      satu_gyro: 17.5                 # 角速度饱和检测阈值相关参数；用于识别异常 IMU 陀螺数据
+      acc_norm: 1.0                   # 归一化重力模长参考值；部分实现里用于初始化和约束
+      lidar_meas_cov: 0.001           # LiDAR 测量噪声协方差；越小越信任 LiDAR 匹配结果
+      acc_cov_output: 500.0           # 输出状态中加速度相关协方差上界/缩放参数；影响状态不确定度传播
+      gyr_cov_output: 1000.0          # 输出状态中角速度相关协方差上界/缩放参数；影响状态不确定度传播
+      b_acc_cov: 0.0001               # 加速度计零偏随机游走协方差；越大表示偏置变化更快
+      b_gyr_cov: 0.0001               # 陀螺仪零偏随机游走协方差；越大表示偏置变化更快
+      imu_meas_acc_cov: 0.1           # IMU 加速度测量噪声协方差；越大表示越不信任加速度观测
+      imu_meas_omg_cov: 0.1           # IMU 角速度测量噪声协方差；越大表示越不信任陀螺观测
+      gyr_cov_input: 0.01             # 输入角速度噪声参数；参与滤波传播模型
+      acc_cov_input: 0.1              # 输入加速度噪声参数；参与滤波传播模型
+      plane_thr: 0.1                  # 平面拟合/平面约束阈值，单位 m；越小匹配更严格
+      match_s: 81.0                   # 点云匹配搜索范围/尺度相关参数；影响邻域搜索与匹配鲁棒性
+      fov_degree: 360.0               # 视场角，单位度；360 表示全向 LiDAR
+      det_range: 40.0                 # 有效检测/建图范围，单位 m；超过该距离的点对建图贡献较小
+      gravity_align: true             # 是否在初始化时做重力对齐；开启后姿态初始化通常更稳
+      gravity: [0.0, 0.0, -9.810]     # 世界坐标系下重力向量，单位 m/s^2
+      gravity_init: [0.0, 0.0, -9.810]  # 初始化阶段使用的重力先验，单位 m/s^2
+      extrinsic_T: [0.011, 0.02329, -0.04412]  # LiDAR 到 IMU 的平移外参，单位 m
+      extrinsic_R: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]  # LiDAR 到 IMU 的旋转外参，按 3x3 行优先矩阵展开
+    odometry:
+      publish_odometry_without_downsample: false  # 是否对未降采样点云也发布里程计；开启可能更实时，但负担更大
+    publish:
+      path_en: true                   # 是否发布轨迹 path
+      scan_publish_en: true           # 是否发布世界系下的点云/扫描结果
+      scan_bodyframe_pub_en: false    # 是否发布机体系下点云；调试传感器外参或运动补偿时有用
+    pcd_save:
+      pcd_save_en: false              # 是否保存 PCD 点云到磁盘
+      interval: -1                    # PCD 保存间隔；-1 一般表示不按固定间隔保存或采用默认行为
