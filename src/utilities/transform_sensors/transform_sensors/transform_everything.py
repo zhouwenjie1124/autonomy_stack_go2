@@ -65,12 +65,12 @@ class Repuber(Node):
                 
         self.body2cloud_trans = TransformStamped()
         self.body2cloud_trans.header.stamp = self.get_clock().now().to_msg()
-        self.body2cloud_trans.header.frame_id = "body"
+        self.body2cloud_trans.header.frame_id = "body2"
         self.body2cloud_trans.child_frame_id = "utlidar_lidar_1"
-        self.body2cloud_trans.transform.translation.x = 0.0
+        self.body2cloud_trans.transform.translation.x = 0.28945
         self.body2cloud_trans.transform.translation.y = 0.0
-        self.body2cloud_trans.transform.translation.z = 0.0
-        quat = tf_transformations.quaternion_from_euler(0, 2.87820258505555555556, 0)
+        self.body2cloud_trans.transform.translation.z = -0.046825
+        quat = tf_transformations.quaternion_from_euler(0,2.87820258505555555556,0)
         self.body2cloud_trans.transform.rotation.x = quat[0]
         self.body2cloud_trans.transform.rotation.y = quat[1]
         self.body2cloud_trans.transform.rotation.z = quat[2]
@@ -122,7 +122,7 @@ class Repuber(Node):
         
         transformed_points = points
         transformed_points[:, 0:3] = points[:, 0:3] @ mat.T + translation
-        transformed_points[:, 2] -= self.cam_offset
+        # transformed_points[:, 2] -= self.cam_offset
         i = 0
         remove_list = []
         transformed_points = transformed_points.tolist()
@@ -138,7 +138,7 @@ class Repuber(Node):
         
         elevated_cloud = pc2.create_cloud(data.header, data.fields, transformed_points)
         elevated_cloud.header.stamp = Time(nanoseconds=Time.from_msg(elevated_cloud.header.stamp).nanoseconds + self.time_stamp_offset).to_msg()
-        elevated_cloud.header.frame_id = "body"
+        elevated_cloud.header.frame_id = "body2"
         elevated_cloud.is_dense = data.is_dense
 
         self.cloud_pub.publish(elevated_cloud)
@@ -158,7 +158,7 @@ class Repuber(Node):
         return ret_vec
 
 
-def imu_callback(self, data):    
+    def imu_callback(self, data):
         trans = np.zeros(3)
         trans[0] = self.body2imu_trans.transform.translation.x
         trans[1] = self.body2imu_trans.transform.translation.y

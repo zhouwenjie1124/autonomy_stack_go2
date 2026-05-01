@@ -18,7 +18,7 @@
     <param name="multicast_iface" value="enp3s0"/> 
   </node> -->
 
-  <include file="$(find-pkg-share point_lio_unilidar)/launch/mapping_utlidar_onboard_imu.launch">
+  <include file="$(find-pkg-share point_lio_unilidar)/launch/mapping_mid360.launch">
     <arg name="rviz" value="false"/>
   </include>
 
@@ -31,6 +31,16 @@
   </include>
 
   <include file="$(find-pkg-share terrain_analysis)/launch/terrain_analysis.launch" />
+
+  <node pkg="transform_sensors" exec="transform_everything" name="transform_everything" output="screen" />
+
+  <include file="$(find-pkg-share utlidar_obstacle_layer)/launch/utlidar_obstacle_layer.launch" />
+
+  <node pkg="utlidar_obstacle_layer" exec="cloud_merger" name="cloud_merger" output="screen">
+    <param name="mid360_to_body_tx" value="0.0"/>
+    <param name="mid360_to_body_ty" value="0.0"/>
+    <param name="mid360_to_body_tz" value="0.0"/>
+  </node>
 
   <!-- <include file="$(find-pkg-share terrain_analysis_ext)/launch/terrain_analysis_ext.launch" >
     <arg name="checkTerrainConn" value="$(var checkTerrainConn)"/>

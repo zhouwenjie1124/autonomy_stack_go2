@@ -1,6 +1,7 @@
 <launch>
 
   <node pkg="terrain_analysis" exec="terrainAnalysis" name="terrainAnalysis" output="screen">
+    <remap from="/registered_scan" to="/merged_scan"/>
     <param name="scanVoxelSize" value="0.05" />
     <param name="decayTime" value="2.0" />
     <param name="noDecayDis" value="0.0" />
