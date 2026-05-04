@@ -295,7 +295,7 @@ int main(int argc, char** argv)
   auto pubGo2Request = nh->create_publisher<unitree_api::msg::Request>("/api/sport/request", 10);
 
   geometry_msgs::msg::TwistStamped cmd_vel;
-  cmd_vel.header.frame_id = "vehicle";
+  cmd_vel.header.frame_id = "base_link";
 
   if (autonomyMode) {
     joySpeed = autonomySpeed / maxSpeed;

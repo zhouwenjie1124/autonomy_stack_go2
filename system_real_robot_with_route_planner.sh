@@ -3,5 +3,5 @@
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 cd $SCRIPT_DIR
-source ./install/setup.bash
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/install/setup.bash"
 ros2 launch vehicle_simulator system_real_robot_with_route_planner.launch

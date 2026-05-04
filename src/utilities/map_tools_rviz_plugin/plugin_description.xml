@@ -1,0 +1,9 @@
+<library path="map_tools_rviz_plugin">
+  <class name="map_tools_rviz_plugin/MapToolsPanel"
+         type="map_tools_rviz_plugin::MapToolsPanel"
+         base_class_type="rviz_common::Panel">
+    <description>
+      Panel with buttons to clear the goal point and the terrain map.
+    </description>
+  </class>
+</library>

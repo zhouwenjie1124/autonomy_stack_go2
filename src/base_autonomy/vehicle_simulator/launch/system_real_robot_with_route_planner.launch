@@ -48,6 +48,10 @@
 
   <node pkg="tf2_ros" exec="static_transform_publisher" name="loamInterfaceTransPubMap" args="0 0 0 0 0 0 /map /camera_init"/>
 
-  <node pkg="tf2_ros" exec="static_transform_publisher" name="loamInterfaceTransPubVehicle" args="0 0 0 0 0 0 /aft_mapped /sensor"/>
-  
+  <!-- SLAM odometry output frame renamed from sensor to mid360 -->
+  <node pkg="tf2_ros" exec="static_transform_publisher" name="loamInterfaceTransPubVehicle" args="0 0 0 0 0 0 /aft_mapped /mid360"/>
+
+  <!-- Go2W robot description: broadcasts mid360 → base_link → all URDF links -->
+  <include file="$(find-pkg-share go2w_description)/launch/go2w_description.launch.py"/>
+
 </launch>
