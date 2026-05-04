@@ -8,29 +8,40 @@
 #include <Eigen/Geometry>
 #include <mutex>
 
-// Merges MID360 registered scan (map frame) with UTLidar body-frame cloud
-// to produce a denser terrain map input.
+// Merges MID360 registered scan (map frame) with raw UTLidar cloud
+// using URDF-derived transforms directly — no transform_sensors node needed.
 //
-// Subscriptions:
-//   /registered_scan            - MID360 registered cloud in map frame (from Point-LIO)
-//   /utlidar/transformed_cloud  - UTLidar cloud in robot body frame (from transform_sensors)
-//   /state_estimation           - Point-LIO odometry (MID360/sensor pose in map frame)
+// Transform chain (all from URDF):
+//   utlidar/cloud (radar frame)
+//     → base_link  via radar_joint:          xyz=[0.28945, 0, -0.046825]  rpy=[0, 2.8782, 0]
+//     → mid360     via mid360_to_base_link:  xyz=[-0.12971, 0, -0.15579]  rpy=[0, -0.226893, 0]
+//     → map        via SLAM odometry (/state_estimation)
 //
-// Publications:
-//   /merged_scan                - combined cloud in map frame
+// Subscriptions:  /registered_scan  /utlidar/cloud  /state_estimation
+// Publication:    /merged_scan
+
+// URDF radar_joint: base_link → radar (UTLidar hardware frame)
+static constexpr double kRadarTx    =  0.28945;
+static constexpr double kRadarTy    =  0.0;
+static constexpr double kRadarTz    = -0.046825;
+static constexpr double kRadarPitch =  2.8782;   // Ry(rad), from rpy="0 2.8782 0"
+
+// URDF mid360_to_base_link joint: mid360 → base_link
+static constexpr double kMid360Tx    = -0.12971;
+static constexpr double kMid360Ty    =  0.0;
+static constexpr double kMid360Tz    = -0.15579;
+static constexpr double kMid360Pitch = -0.226893; // Ry(rad), from rpy="0 -0.226893 0"
 
 static std::mutex odom_mutex;
 static Eigen::Vector3d sensor_pos(0, 0, 0);
 static Eigen::Quaterniond sensor_rot(1, 0, 0, 0);
 static bool odom_received = false;
 
-// Stores the latest UTLidar body-frame cloud
 static std::mutex utlidar_mutex;
 static sensor_msgs::msg::PointCloud2::SharedPtr latest_utlidar_cloud;
 
-static double mid360_to_body_tx;
-static double mid360_to_body_ty;
-static double mid360_to_body_tz;
+// Precomputed constant: T(mid360 ← radar) = T_mid360_base × T_base_radar
+static Eigen::Isometry3d T_mid360_radar = Eigen::Isometry3d::Identity();
 
 void odometryCallback(const nav_msgs::msg::Odometry::ConstSharedPtr msg)
 {
@@ -60,19 +71,17 @@ void registeredScanCallback(
     return;
   }
 
-  // Get latest UTLidar cloud
   sensor_msgs::msg::PointCloud2::SharedPtr utlidar_msg;
   {
     std::lock_guard<std::mutex> lock(utlidar_mutex);
     utlidar_msg = latest_utlidar_cloud;
   }
-
   if (!utlidar_msg) {
     pub->publish(*scan_msg);
     return;
   }
 
-  // Build body→map transform (same pattern as utlidar_obstacle_publisher)
+  // T_map_mid360 from SLAM odometry
   Eigen::Vector3d pos;
   Eigen::Quaterniond rot;
   {
@@ -80,29 +89,25 @@ void registeredScanCallback(
     pos = sensor_pos;
     rot = sensor_rot;
   }
+  Eigen::Isometry3d T_map_mid360 = Eigen::Isometry3d::Identity();
+  T_map_mid360.translate(pos);
+  T_map_mid360.rotate(rot);
 
-  Eigen::Isometry3d T_sensor_map = Eigen::Isometry3d::Identity();
-  T_sensor_map.translate(pos);
-  T_sensor_map.rotate(rot);
+  // Full chain: radar → mid360 → map
+  Eigen::Isometry3d T_map_radar = T_map_mid360 * T_mid360_radar;
 
-  Eigen::Isometry3d T_body_sensor = Eigen::Isometry3d::Identity();
-  T_body_sensor.translate(Eigen::Vector3d(mid360_to_body_tx, mid360_to_body_ty, mid360_to_body_tz));
-
-  Eigen::Isometry3d T_body_map = T_sensor_map * T_body_sensor;
-
-  // Transform UTLidar body-frame cloud to map frame
-  pcl::PointCloud<pcl::PointXYZI> utlidar_body;
-  pcl::fromROSMsg(*utlidar_msg, utlidar_body);
+  // Transform raw UTLidar cloud to map frame
+  pcl::PointCloud<pcl::PointXYZI> utlidar_raw;
+  pcl::fromROSMsg(*utlidar_msg, utlidar_raw);
 
   pcl::PointCloud<pcl::PointXYZI> utlidar_map;
-  utlidar_map.reserve(utlidar_body.points.size());
-
-  for (const auto& pt : utlidar_body.points) {
-    Eigen::Vector3d p_map = T_body_map * Eigen::Vector3d(pt.x, pt.y, pt.z);
+  utlidar_map.reserve(utlidar_raw.points.size());
+  for (const auto & pt : utlidar_raw.points) {
+    Eigen::Vector3d p = T_map_radar * Eigen::Vector3d(pt.x, pt.y, pt.z);
     pcl::PointXYZI out;
-    out.x = static_cast<float>(p_map.x());
-    out.y = static_cast<float>(p_map.y());
-    out.z = static_cast<float>(p_map.z());
+    out.x = static_cast<float>(p.x());
+    out.y = static_cast<float>(p.y());
+    out.z = static_cast<float>(p.z());
     out.intensity = pt.intensity;
     utlidar_map.points.push_back(out);
   }
@@ -110,7 +115,6 @@ void registeredScanCallback(
   // Concatenate with MID360 registered scan
   pcl::PointCloud<pcl::PointXYZI> mid360_cloud;
   pcl::fromROSMsg(*scan_msg, mid360_cloud);
-
   mid360_cloud += utlidar_map;
 
   sensor_msgs::msg::PointCloud2 out_msg;
@@ -120,18 +124,23 @@ void registeredScanCallback(
   pub->publish(out_msg);
 }
 
-int main(int argc, char **argv)
+int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);
   auto node = rclcpp::Node::make_shared("cloud_merger");
 
-  node->declare_parameter<double>("mid360_to_body_tx", 0.0);
-  node->declare_parameter<double>("mid360_to_body_ty", 0.0);
-  node->declare_parameter<double>("mid360_to_body_tz", 0.0);
+  // Build constant transform: T(mid360 ← radar) = T_mid360_base × T_base_radar
+  // T_base_radar: base_link → radar  (from URDF radar_joint)
+  Eigen::Isometry3d T_base_radar = Eigen::Isometry3d::Identity();
+  T_base_radar.translate(Eigen::Vector3d(kRadarTx, kRadarTy, kRadarTz));
+  T_base_radar.rotate(Eigen::AngleAxisd(kRadarPitch, Eigen::Vector3d::UnitY()));
 
-  node->get_parameter("mid360_to_body_tx", mid360_to_body_tx);
-  node->get_parameter("mid360_to_body_ty", mid360_to_body_ty);
-  node->get_parameter("mid360_to_body_tz", mid360_to_body_tz);
+  // T_mid360_base: mid360 → base_link  (from URDF mid360_to_base_link joint)
+  Eigen::Isometry3d T_mid360_base = Eigen::Isometry3d::Identity();
+  T_mid360_base.translate(Eigen::Vector3d(kMid360Tx, kMid360Ty, kMid360Tz));
+  T_mid360_base.rotate(Eigen::AngleAxisd(kMid360Pitch, Eigen::Vector3d::UnitY()));
+
+  T_mid360_radar = T_mid360_base * T_base_radar;
 
   auto pub = node->create_publisher<sensor_msgs::msg::PointCloud2>("/merged_scan", 5);
 
@@ -139,7 +148,7 @@ int main(int argc, char **argv)
     "/state_estimation", 5, odometryCallback);
 
   auto sub_utlidar = node->create_subscription<sensor_msgs::msg::PointCloud2>(
-    "/utlidar/transformed_cloud", 5, utlidarCallback);
+    "/utlidar/cloud", 5, utlidarCallback);
 
   auto sub_scan = node->create_subscription<sensor_msgs::msg::PointCloud2>(
     "/registered_scan", 5,

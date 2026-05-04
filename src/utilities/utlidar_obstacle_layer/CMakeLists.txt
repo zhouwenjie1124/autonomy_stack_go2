@@ -15,6 +15,8 @@ find_package(sensor_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(pcl_conversions REQUIRED)
 find_package(pcl_ros REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(geometry_msgs REQUIRED)
 
 add_executable(utlidar_obstacle_publisher src/utlidar_obstacle_publisher.cpp)
 ament_target_dependencies(utlidar_obstacle_publisher
@@ -24,7 +26,11 @@ add_executable(cloud_merger src/cloud_merger.cpp)
 ament_target_dependencies(cloud_merger
   rclcpp sensor_msgs nav_msgs pcl_conversions pcl_ros)
 
-install(TARGETS utlidar_obstacle_publisher cloud_merger
+add_executable(utlidar_to_baselink src/utlidar_to_baselink.cpp)
+ament_target_dependencies(utlidar_to_baselink
+  rclcpp sensor_msgs pcl_conversions pcl_ros tf2_ros geometry_msgs)
+
+install(TARGETS utlidar_obstacle_publisher cloud_merger utlidar_to_baselink
   DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY launch
