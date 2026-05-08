@@ -3,14 +3,14 @@
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <tf2_ros/static_transform_broadcaster.h>
 
-// URDF radar_joint: parent=base_link, child=radar
+
 //   xyz="0.28945 0 -0.046825"  rpy="0 2.8782 0"
-// We publish this same transform as base_link → laser_link so that RViz
-// (and any TF consumer) can resolve laser_link automatically.
-static constexpr double kTx    =  0.28945;
+static constexpr double kTx    =  0.28216;
 static constexpr double kTy    =  0.0;
-static constexpr double kTz    = -0.046825;
-static constexpr double kPitch =  2.8782;   // Ry (rad)
+static constexpr double kTz    =  0.0;
+static constexpr double kRoll  = -2.92072;   // Rx (rad)
+static constexpr double kPitch = -0.141324;  // Ry (rad)
+static constexpr double kYaw   = -1.01053;   // Rz (rad)
 
 class UtlidarToBaselink : public rclcpp::Node
 {
@@ -37,12 +37,16 @@ public:
 private:
   void publish_static_tf()
   {
-    // Ry(pitch) quaternion: q = (0, sin(p/2), 0, cos(p/2))
-    double half = kPitch / 2.0;
-    double qy = std::sin(half);
-    double qw = std::cos(half);
+    // RPY → quaternion (intrinsic ZYX / extrinsic XYZ convention used by ROS)
+    double cr = std::cos(kRoll  / 2.0), sr = std::sin(kRoll  / 2.0);
+    double cp = std::cos(kPitch / 2.0), sp = std::sin(kPitch / 2.0);
+    double cy = std::cos(kYaw   / 2.0), sy = std::sin(kYaw   / 2.0);
+    double qw = cr*cp*cy + sr*sp*sy;
+    double qx = sr*cp*cy - cr*sp*sy;
+    double qy = cr*sp*cy + sr*cp*sy;
+    double qz = cr*cp*sy - sr*sp*cy;
 
-    // base_link → laser_link  (radar joint from URDF)
+    // base_link → laser_link
     geometry_msgs::msg::TransformStamped tf_laser;
     tf_laser.header.stamp    = now();
     tf_laser.header.frame_id = "base_link";
@@ -50,9 +54,9 @@ private:
     tf_laser.transform.translation.x = kTx;
     tf_laser.transform.translation.y = kTy;
     tf_laser.transform.translation.z = kTz;
-    tf_laser.transform.rotation.x = 0.0;
+    tf_laser.transform.rotation.x = qx;
     tf_laser.transform.rotation.y = qy;
-    tf_laser.transform.rotation.z = 0.0;
+    tf_laser.transform.rotation.z = qz;
     tf_laser.transform.rotation.w = qw;
 
     // laser_link → utlidar_lidar  (identity: same physical frame, different SDK name)

@@ -11,20 +11,22 @@
 // Merges MID360 registered scan (map frame) with raw UTLidar cloud
 // using URDF-derived transforms directly — no transform_sensors node needed.
 //
-// Transform chain (all from URDF):
+// Transform chain:
 //   utlidar/cloud (radar frame)
-//     → base_link  via radar_joint:          xyz=[0.28945, 0, -0.046825]  rpy=[0, 2.8782, 0]
+//     → base_link  via Go2W L2 extrinsics:   xyz=[0.28216, 0, 0]  rpy=[-2.92072, -0.141324, -1.01053]
 //     → mid360     via mid360_to_base_link:  xyz=[-0.12971, 0, -0.15579]  rpy=[0, -0.226893, 0]
 //     → map        via SLAM odometry (/state_estimation)
 //
 // Subscriptions:  /registered_scan  /utlidar/cloud  /state_estimation
 // Publication:    /merged_scan
 
-// URDF radar_joint: base_link → radar (UTLidar hardware frame)
-static constexpr double kRadarTx    =  0.28945;
+// base_link → radar (UTLidar) — Go2W L2 extrinsics
+static constexpr double kRadarTx    =  0.28216;
 static constexpr double kRadarTy    =  0.0;
-static constexpr double kRadarTz    = -0.046825;
-static constexpr double kRadarPitch =  2.8782;   // Ry(rad), from rpy="0 2.8782 0"
+static constexpr double kRadarTz    =  0.0;
+static constexpr double kRadarRoll  = -2.92072;   // Rx (rad)
+static constexpr double kRadarPitch = -0.141324;  // Ry (rad)
+static constexpr double kRadarYaw   = -1.01053;   // Rz (rad)
 
 // URDF mid360_to_base_link joint: mid360 → base_link
 static constexpr double kMid360Tx    = -0.12971;
@@ -130,10 +132,14 @@ int main(int argc, char ** argv)
   auto node = rclcpp::Node::make_shared("cloud_merger");
 
   // Build constant transform: T(mid360 ← radar) = T_mid360_base × T_base_radar
-  // T_base_radar: base_link → radar  (from URDF radar_joint)
+  // T_base_radar: base_link → radar  (Go2W L2 extrinsics, full RPY)
+  Eigen::Quaterniond q_radar =
+    Eigen::AngleAxisd(kRadarYaw,   Eigen::Vector3d::UnitZ()) *
+    Eigen::AngleAxisd(kRadarPitch, Eigen::Vector3d::UnitY()) *
+    Eigen::AngleAxisd(kRadarRoll,  Eigen::Vector3d::UnitX());
   Eigen::Isometry3d T_base_radar = Eigen::Isometry3d::Identity();
   T_base_radar.translate(Eigen::Vector3d(kRadarTx, kRadarTy, kRadarTz));
-  T_base_radar.rotate(Eigen::AngleAxisd(kRadarPitch, Eigen::Vector3d::UnitY()));
+  T_base_radar.rotate(q_radar);
 
   // T_mid360_base: mid360 → base_link  (from URDF mid360_to_base_link joint)
   Eigen::Isometry3d T_mid360_base = Eigen::Isometry3d::Identity();
