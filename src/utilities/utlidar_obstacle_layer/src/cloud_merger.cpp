@@ -42,8 +42,18 @@ static bool odom_received = false;
 static std::mutex utlidar_mutex;
 static sensor_msgs::msg::PointCloud2::SharedPtr latest_utlidar_cloud;
 
-// Precomputed constant: T(mid360 ← radar) = T_mid360_base × T_base_radar
-static Eigen::Isometry3d T_mid360_radar = Eigen::Isometry3d::Identity();
+// Precomputed constants (set in main)
+static Eigen::Isometry3d T_base_radar  = Eigen::Isometry3d::Identity(); // radar → base_link
+static Eigen::Isometry3d T_mid360_base = Eigen::Isometry3d::Identity(); // base_link → mid360
+static Eigen::Isometry3d T_mid360_radar = Eigen::Isometry3d::Identity(); // radar → mid360
+
+// Body self-filter box in base_link frame (tune to match robot body geometry)
+static constexpr double kBodyXMin = -0.7;
+static constexpr double kBodyXMax =  0.4;
+static constexpr double kBodyYMin = -0.4;
+static constexpr double kBodyYMax =  0.4;
+static constexpr double kBodyZMin = -0.6;
+static constexpr double kBodyZMax =  0.1;
 
 void odometryCallback(const nav_msgs::msg::Odometry::ConstSharedPtr msg)
 {
@@ -95,21 +105,32 @@ void registeredScanCallback(
   T_map_mid360.translate(pos);
   T_map_mid360.rotate(rot);
 
-  // Full chain: radar → mid360 → map
-  Eigen::Isometry3d T_map_radar = T_map_mid360 * T_mid360_radar;
+  // radar → base_link → mid360 → map, split so we can body-filter in base_link frame
+  Eigen::Isometry3d T_map_base = T_map_mid360 * T_mid360_base;
 
-  // Transform raw UTLidar cloud to map frame
+  // Transform raw UTLidar cloud: radar → base_link (filter) → map
   pcl::PointCloud<pcl::PointXYZI> utlidar_raw;
   pcl::fromROSMsg(*utlidar_msg, utlidar_raw);
 
   pcl::PointCloud<pcl::PointXYZI> utlidar_map;
   utlidar_map.reserve(utlidar_raw.points.size());
   for (const auto & pt : utlidar_raw.points) {
-    Eigen::Vector3d p = T_map_radar * Eigen::Vector3d(pt.x, pt.y, pt.z);
+    // Step 1: radar → base_link
+    Eigen::Vector3d p_base = T_base_radar * Eigen::Vector3d(pt.x, pt.y, pt.z);
+
+    // Step 2: body self-filter (drop points inside robot body volume)
+    if (p_base.x() > kBodyXMin && p_base.x() < kBodyXMax &&
+        p_base.y() > kBodyYMin && p_base.y() < kBodyYMax &&
+        p_base.z() > kBodyZMin && p_base.z() < kBodyZMax) {
+      continue;
+    }
+
+    // Step 3: base_link → map
+    Eigen::Vector3d p_map = T_map_base * p_base;
     pcl::PointXYZI out;
-    out.x = static_cast<float>(p.x());
-    out.y = static_cast<float>(p.y());
-    out.z = static_cast<float>(p.z());
+    out.x = static_cast<float>(p_map.x());
+    out.y = static_cast<float>(p_map.y());
+    out.z = static_cast<float>(p_map.z());
     out.intensity = pt.intensity;
     utlidar_map.points.push_back(out);
   }
@@ -131,18 +152,17 @@ int main(int argc, char ** argv)
   rclcpp::init(argc, argv);
   auto node = rclcpp::Node::make_shared("cloud_merger");
 
-  // Build constant transform: T(mid360 ← radar) = T_mid360_base × T_base_radar
-  // T_base_radar: base_link → radar  (Go2W L2 extrinsics, full RPY)
+  // T_base_radar: radar → base_link  (Go2W L2 extrinsics, full RPY)
   Eigen::Quaterniond q_radar =
     Eigen::AngleAxisd(kRadarYaw,   Eigen::Vector3d::UnitZ()) *
     Eigen::AngleAxisd(kRadarPitch, Eigen::Vector3d::UnitY()) *
     Eigen::AngleAxisd(kRadarRoll,  Eigen::Vector3d::UnitX());
-  Eigen::Isometry3d T_base_radar = Eigen::Isometry3d::Identity();
+  T_base_radar = Eigen::Isometry3d::Identity();
   T_base_radar.translate(Eigen::Vector3d(kRadarTx, kRadarTy, kRadarTz));
   T_base_radar.rotate(q_radar);
 
-  // T_mid360_base: mid360 → base_link  (from URDF mid360_to_base_link joint)
-  Eigen::Isometry3d T_mid360_base = Eigen::Isometry3d::Identity();
+  // T_mid360_base: base_link → mid360  (from URDF mid360_to_base_link joint)
+  T_mid360_base = Eigen::Isometry3d::Identity();
   T_mid360_base.translate(Eigen::Vector3d(kMid360Tx, kMid360Ty, kMid360Tz));
   T_mid360_base.rotate(Eigen::AngleAxisd(kMid360Pitch, Eigen::Vector3d::UnitY()));
 
