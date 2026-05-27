@@ -80,12 +80,12 @@ Visualization Manager:
       Color: 255; 255; 255
       Color Transformer: Intensity
       Decay Time: 5
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
-      Max Intensity: 2.7612781524658203
+      Max Intensity: 3.2778148651123047
       Min Color: 0; 0; 0
-      Min Intensity: -0.768990159034729
+      Min Intensity: -0.7330211400985718
       Name: RegScan
       Position Transformer: XYZ
       Selectable: true
@@ -100,7 +100,7 @@ Visualization Manager:
         Value: /merged_scan
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Alpha: 0.20000000298023224
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -146,7 +146,7 @@ Visualization Manager:
       Color: 255; 255; 255
       Color Transformer: Intensity
       Decay Time: 1
-      Enabled: false
+      Enabled: true
       Invert Rainbow: true
       Max Color: 255; 255; 255
       Max Intensity: 0.30000001192092896
@@ -166,7 +166,7 @@ Visualization Manager:
         Value: /terrain_map
       Use Fixed Frame: true
       Use rainbow: true
-      Value: false
+      Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: false
       Autocompute Value Bounds:
@@ -239,7 +239,7 @@ Visualization Manager:
       Color: 0; 170; 255
       Color Transformer: Intensity
       Decay Time: 0
-      Enabled: false
+      Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Max Intensity: 6
@@ -259,7 +259,7 @@ Visualization Manager:
         Value: /free_paths
       Use Fixed Frame: true
       Use rainbow: true
-      Value: false
+      Value: true
     - Alpha: 1
       Class: rviz_default_plugins/PointStamped
       Color: 204; 41; 204
@@ -432,18 +432,8 @@ Visualization Manager:
           Value: true
         camera:
           Value: false
-        camera_color_frame:
-          Value: true
-        camera_color_optical_frame:
-          Value: true
-        camera_depth_frame:
-          Value: true
-        camera_depth_optical_frame:
-          Value: true
         camera_init:
           Value: false
-        camera_link:
-          Value: true
         imu:
           Value: false
         map:
@@ -496,7 +486,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 5.463163375854492
+      Distance: 9.213078498840332
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1

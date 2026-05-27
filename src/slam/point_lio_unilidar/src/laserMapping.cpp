@@ -96,6 +96,8 @@ sensor_msgs::msg::Imu imu_last, imu_next;
 sensor_msgs::msg::Imu::ConstSharedPtr imu_last_ptr;
 nav_msgs::msg::Path path;
 nav_msgs::msg::Odometry odomAftMapped;
+nav_msgs::msg::Odometry odomBaseLinkMapped;
+Eigen::Matrix4d T_lidar_to_body;
 geometry_msgs::msg::PoseStamped msg_body_pose;
 
 std::unique_ptr<tf2_ros::TransformBroadcaster> tf_br;
@@ -811,6 +813,35 @@ void publish_odometry(const rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPt
     tf_br->sendTransform(trans_odom_to_base);
 }
 
+void publish_odometry_base_link(const rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr pubOdomBaseLink)
+{
+    Eigen::Vector3d pos(odomAftMapped.pose.pose.position.x,
+                        odomAftMapped.pose.pose.position.y,
+                        odomAftMapped.pose.pose.position.z);
+    Eigen::Quaterniond q(odomAftMapped.pose.pose.orientation.w,
+                         odomAftMapped.pose.pose.orientation.x,
+                         odomAftMapped.pose.pose.orientation.y,
+                         odomAftMapped.pose.pose.orientation.z);
+    Eigen::Matrix4d T_map_lidar = Eigen::Matrix4d::Identity();
+    T_map_lidar.block<3, 3>(0, 0) = q.toRotationMatrix();
+    T_map_lidar.block<3, 1>(0, 3) = pos;
+
+    Eigen::Matrix4d T_map_base = T_map_lidar * T_lidar_to_body;
+    Eigen::Quaterniond q_base(T_map_base.block<3, 3>(0, 0));
+    q_base.normalize();
+
+    odomBaseLinkMapped.header = odomAftMapped.header;
+    odomBaseLinkMapped.child_frame_id = "base_link";
+    odomBaseLinkMapped.pose.pose.position.x = T_map_base(0, 3);
+    odomBaseLinkMapped.pose.pose.position.y = T_map_base(1, 3);
+    odomBaseLinkMapped.pose.pose.position.z = T_map_base(2, 3);
+    odomBaseLinkMapped.pose.pose.orientation.x = q_base.x();
+    odomBaseLinkMapped.pose.pose.orientation.y = q_base.y();
+    odomBaseLinkMapped.pose.pose.orientation.z = q_base.z();
+    odomBaseLinkMapped.pose.pose.orientation.w = q_base.w();
+    pubOdomBaseLink->publish(odomBaseLinkMapped);
+}
+
 void publish_path(rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr pubPath)
 {
     set_posestamp(msg_body_pose.pose);
@@ -856,6 +887,15 @@ int main(int argc, char **argv)
 
     Lidar_T_wrt_IMU << VEC_FROM_ARRAY(extrinT);
     Lidar_R_wrt_IMU << MAT_FROM_ARRAY(extrinR);
+
+    T_lidar_to_body.setIdentity();
+    T_lidar_to_body.block<3, 3>(0, 0) <<
+        lidarToBodyR[0], lidarToBodyR[1], lidarToBodyR[2],
+        lidarToBodyR[3], lidarToBodyR[4], lidarToBodyR[5],
+        lidarToBodyR[6], lidarToBodyR[7], lidarToBodyR[8];
+    T_lidar_to_body(0, 3) = lidarToBodyT[0];
+    T_lidar_to_body(1, 3) = lidarToBodyT[1];
+    T_lidar_to_body(2, 3) = lidarToBodyT[2];
 
     if (extrinsic_est_en)
     {
@@ -925,6 +965,7 @@ int main(int argc, char **argv)
     auto pubLaserCloudMap = node->create_publisher<sensor_msgs::msg::PointCloud2>("/Laser_map", 1000);
 
     auto pubOdomAftMapped = node->create_publisher<nav_msgs::msg::Odometry>("/aft_mapped_to_init", 1000);
+    auto pubOdomBaseLink  = node->create_publisher<nav_msgs::msg::Odometry>("/odom_base_link", 1000);
 
     auto pubPath = node->create_publisher<nav_msgs::msg::Path>("/path", 1000);
 
@@ -1243,6 +1284,7 @@ int main(int argc, char **argv)
                     /******* Publish odometry *******/
 
                     publish_odometry(pubOdomAftMapped);
+                    publish_odometry_base_link(pubOdomBaseLink);
                     if (runtime_pos_log)
                     {
                         state_out = kf_output.x_;
@@ -1364,6 +1406,7 @@ int main(int argc, char **argv)
                     /******* Publish odometry *******/
 
                     publish_odometry(pubOdomAftMapped);
+                    publish_odometry_base_link(pubOdomBaseLink);
                     if (runtime_pos_log)
                     {
                         state_in = kf_input.x_;
@@ -1390,6 +1433,7 @@ int main(int argc, char **argv)
         if (!publish_odometry_without_downsample)
         {
             publish_odometry(pubOdomAftMapped);
+            publish_odometry_base_link(pubOdomBaseLink);
         }
 
         /*** add the feature points to map kdtree ***/

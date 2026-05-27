@@ -69,6 +69,8 @@ std::vector<double> gravity;
 
 std::vector<double> extrinT;
 std::vector<double> extrinR;
+std::vector<double> lidarToBodyT;
+std::vector<double> lidarToBodyR;
 
 bool runtime_pos_log;
 bool pcd_save_en;
@@ -145,6 +147,10 @@ void readParameters(rclcpp::Node::SharedPtr node)
   declare_and_get_parameter<std::vector<double>>(node, "mapping.gravity_init", gravity_init, std::vector<double>());
   declare_and_get_parameter<std::vector<double>>(node, "mapping.extrinsic_T", extrinT, std::vector<double>());
   declare_and_get_parameter<std::vector<double>>(node, "mapping.extrinsic_R", extrinR, std::vector<double>());
+  declare_and_get_parameter<std::vector<double>>(node, "lidar_to_body_T", lidarToBodyT,
+      std::vector<double>{0.0, 0.0, 0.0});
+  declare_and_get_parameter<std::vector<double>>(node, "lidar_to_body_R", lidarToBodyR,
+      std::vector<double>{1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0});
   declare_and_get_parameter<bool>(node, "odometry.publish_odometry_without_downsample", publish_odometry_without_downsample, false);
   declare_and_get_parameter<bool>(node, "publish.path_en", path_en, true);
   declare_and_get_parameter<bool>(node, "publish.scan_publish_en", scan_pub_en, 1);

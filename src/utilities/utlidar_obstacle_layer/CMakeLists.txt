@@ -26,7 +26,11 @@ add_executable(utlidar_to_baselink src/utlidar_to_baselink.cpp)
 ament_target_dependencies(utlidar_to_baselink
   rclcpp sensor_msgs pcl_conversions pcl_ros tf2_ros geometry_msgs)
 
-install(TARGETS cloud_merger utlidar_to_baselink
+add_executable(lidar_base_merger src/lidar_base_merger.cpp)
+ament_target_dependencies(lidar_base_merger
+  rclcpp sensor_msgs pcl_conversions pcl_ros)
+
+install(TARGETS cloud_merger utlidar_to_baselink lidar_base_merger
   DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY launch

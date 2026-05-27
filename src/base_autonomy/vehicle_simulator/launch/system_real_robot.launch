@@ -1,7 +1,7 @@
 <launch>
 
   <arg name="world_name" default="real_world"/>
-  <arg name="sensorOffsetX" default="0.3"/>
+  <arg name="sensorOffsetX" default="0.0"/>
   <arg name="sensorOffsetY" default="0.0"/>
   <arg name="cameraOffsetZ" default="0.0"/>
   <arg name="vehicleX" default="0.0"/>
@@ -32,7 +32,8 @@
 
   <include file="$(find-pkg-share terrain_analysis)/launch/terrain_analysis.launch" />
 
-  <node pkg="transform_sensors" exec="transform_everything" name="transform_everything" output="screen" />
+  <!-- go2 legacy -->
+  <!-- <node pkg="transform_sensors" exec="transform_everything" name="transform_everything" output="screen" /> --> 
 
   <include file="$(find-pkg-share utlidar_obstacle_layer)/launch/utlidar_obstacle_layer.launch" />
 

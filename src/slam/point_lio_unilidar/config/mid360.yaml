@@ -10,6 +10,8 @@ laserMapping:
     filter_size_map: 0.1              # 地图点云体素降采样分辨率，单位 m；越大地图更稀疏、匹配更快
     cube_side_length: 1000.0          # 局部地图立方体边长，单位 m；决定维护的地图空间范围
     runtime_pos_log_enable: false     # 是否在运行时输出位姿日志到文件；调试时可开，正常运行通常关闭
+    lidar_to_body_T: [-0.12971, 0.0, -0.15579]
+    lidar_to_body_R: [0.97437, 0.0, -0.22495, 0.0, 1.0, 0.0, 0.22495, 0.0, 0.97437]
     common:
       lid_topic: "/livox/lidar"       # LiDAR 点云话题名
       imu_topic: "/livox/imu"         # IMU 话题名
