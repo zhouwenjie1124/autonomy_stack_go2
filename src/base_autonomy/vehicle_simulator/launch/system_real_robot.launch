@@ -18,6 +18,17 @@
     <param name="multicast_iface" value="enp3s0"/> 
   </node> -->
 
+  <!-- MID360 LiDAR driver -->
+  <node pkg="livox_ros_driver2" exec="livox_ros_driver2_node" name="livox_lidar_publisher" output="screen">
+    <param name="xfer_format" value="0"/>
+    <param name="multi_topic" value="0"/>
+    <param name="data_src" value="0"/>
+    <param name="publish_freq" value="10.0"/>
+    <param name="output_data_type" value="0"/>
+    <param name="frame_id" value="livox_frame"/>
+    <param name="user_config_path" value="$(find-pkg-share livox_ros_driver2)/config/MID360_config.json"/>
+  </node>
+
   <include file="$(find-pkg-share point_lio_unilidar)/launch/mapping_mid360.launch">
     <arg name="rviz" value="false"/>
   </include>
@@ -35,9 +46,7 @@
   <!-- go2 legacy -->
   <!-- <node pkg="transform_sensors" exec="transform_everything" name="transform_everything" output="screen" /> --> 
 
-  <include file="$(find-pkg-share utlidar_obstacle_layer)/launch/utlidar_obstacle_layer.launch" />
-
-  <node pkg="utlidar_obstacle_layer" exec="cloud_merger" name="cloud_merger" output="screen"/>
+<node pkg="unitree_lidar_fix" exec="cloud_merger" name="cloud_merger" output="screen"/>
 
   <!-- <include file="$(find-pkg-share terrain_analysis_ext)/launch/terrain_analysis_ext.launch" >
     <arg name="checkTerrainConn" value="$(var checkTerrainConn)"/>
