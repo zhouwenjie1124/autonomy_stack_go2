@@ -22,6 +22,7 @@ bool cut_frame;
 bool use_imu_as_input;
 bool space_down_sample;
 bool publish_odometry_without_downsample;
+double base_link_vel_lpf_alpha;
 
 int init_map_size;
 int con_frame_num;
@@ -101,7 +102,7 @@ void readParameters(rclcpp::Node::SharedPtr node)
   p_pre.reset(new Preprocess());
 
   declare_and_get_parameter<bool>(node, "prop_at_freq_of_imu", prop_at_freq_of_imu, 1);
-  declare_and_get_parameter<bool>(node, "use_imu_as_input", use_imu_as_input, 1);
+  declare_and_get_parameter<bool>(node, "use_imu_as_input", use_imu_as_input, 0);
   declare_and_get_parameter<bool>(node, "check_satu", check_satu, 1);
   declare_and_get_parameter<int>(node, "init_map_size", init_map_size, 100);
   declare_and_get_parameter<bool>(node, "space_down_sample", space_down_sample, 1);
@@ -119,7 +120,7 @@ void readParameters(rclcpp::Node::SharedPtr node)
   declare_and_get_parameter<double>(node, "common.time_lag_imu_to_lidar", time_lag_imu_to_lidar, 0.0);
   declare_and_get_parameter<double>(node, "filter_size_surf", filter_size_surf_min, 0.5);
   declare_and_get_parameter<double>(node, "filter_size_map", filter_size_map_min, 0.5);
-  declare_and_get_parameter<double>(node, "cube_side_length", cube_len, 200);
+  declare_and_get_parameter<double>(node, "cube_side_length", cube_len, 1000);
   declare_and_get_parameter<float>(node, "mapping.det_range", DET_RANGE, 300.f);
   declare_and_get_parameter<double>(node, "mapping.fov_degree", fov_deg, 180);
   declare_and_get_parameter<bool>(node, "mapping.imu_en", imu_en, true);
@@ -152,6 +153,7 @@ void readParameters(rclcpp::Node::SharedPtr node)
   declare_and_get_parameter<std::vector<double>>(node, "lidar_to_body_R", lidarToBodyR,
       std::vector<double>{1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0});
   declare_and_get_parameter<bool>(node, "odometry.publish_odometry_without_downsample", publish_odometry_without_downsample, false);
+  declare_and_get_parameter<double>(node, "odometry.base_link_vel_lpf_alpha", base_link_vel_lpf_alpha, 1.0);
   declare_and_get_parameter<bool>(node, "publish.path_en", path_en, true);
   declare_and_get_parameter<bool>(node, "publish.scan_publish_en", scan_pub_en, 1);
   declare_and_get_parameter<bool>(node, "publish.scan_bodyframe_pub_en", scan_body_pub_en, 1);

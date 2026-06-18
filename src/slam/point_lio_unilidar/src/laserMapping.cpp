@@ -773,6 +773,36 @@ void set_posestamp(T &out)
     }
 }
 
+// Fill the twist.twist part of an Odometry message with the EKF's estimated
+// linear velocity, expressed in the world frame (camera_init), in m/s.
+// Mirror set_posestamp: pick kf_output vs kf_input based on use_imu_as_input,
+// the same way pose is selected above.
+template <typename T>
+void set_velocity(T &out)
+{
+    if (!use_imu_as_input)
+    {
+        out.linear.x = kf_output.x_.vel(0);
+        out.linear.y = kf_output.x_.vel(1);
+        out.linear.z = kf_output.x_.vel(2);
+    }
+    else
+    {
+        out.linear.x = kf_input.x_.vel(0);
+        out.linear.y = kf_input.x_.vel(1);
+        out.linear.z = kf_input.x_.vel(2);
+    }
+}
+
+// world-frame (camera_init) linear velocity from the active KF state
+Eigen::Vector3d get_world_velocity()
+{
+    if (!use_imu_as_input)
+        return kf_output.x_.vel;
+    else
+        return kf_input.x_.vel;
+}
+
 void publish_odometry(const rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr pubOdomAftMapped)
 {
     odomAftMapped.header.frame_id = "camera_init";
@@ -786,6 +816,7 @@ void publish_odometry(const rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPt
         odomAftMapped.header.stamp = get_ros_time(lidar_end_time);
     }
     set_posestamp(odomAftMapped.pose.pose);
+    set_velocity(odomAftMapped.twist.twist);
 
     pubOdomAftMapped->publish(odomAftMapped);
 
@@ -839,6 +870,43 @@ void publish_odometry_base_link(const rclcpp::Publisher<nav_msgs::msg::Odometry>
     odomBaseLinkMapped.pose.pose.orientation.y = q_base.y();
     odomBaseLinkMapped.pose.pose.orientation.z = q_base.z();
     odomBaseLinkMapped.pose.pose.orientation.w = q_base.w();
+
+    // ---- twist expressed in base_link (ROS convention: twist is in child_frame_id) ----
+    // KF state velocity is in world frame (camera_init). Rotate it into base_link so the
+    // twist is body-frame. q_base = R_world_base (base_link -> world), so world -> base_link
+    // uses its transpose/inverse.
+    //
+    // q_base = R_world_base, so world -> base_link uses its conjugate (= inverse for a unit quat).
+    // Angular velocity is intentionally left at zero per current design.
+    Eigen::Vector3d v_world = get_world_velocity();
+    Eigen::Vector3d v_base = q_base.conjugate() * v_world;
+
+    // First-order EMA low-pass on the base_link linear velocity to suppress
+    // the high-frequency noise of the KF velocity state (alpha in (0,1]).
+    static bool vel_lpf_init = false;
+    static Eigen::Vector3d v_base_filt = Eigen::Vector3d::Zero();
+    double alpha = base_link_vel_lpf_alpha;
+    if (alpha > 0.0 && alpha < 1.0)
+    {
+        if (!vel_lpf_init)
+        {
+            v_base_filt = v_base;
+            vel_lpf_init = true;
+        }
+        else
+        {
+            v_base_filt = alpha * v_base + (1.0 - alpha) * v_base_filt;
+        }
+        v_base = v_base_filt;
+    }
+
+    odomBaseLinkMapped.twist.twist.linear.x = v_base.x();
+    odomBaseLinkMapped.twist.twist.linear.y = v_base.y();
+    odomBaseLinkMapped.twist.twist.linear.z = v_base.z();
+    odomBaseLinkMapped.twist.twist.angular.x = 0.0;
+    odomBaseLinkMapped.twist.twist.angular.y = 0.0;
+    odomBaseLinkMapped.twist.twist.angular.z = 0.0;
+
     pubOdomBaseLink->publish(odomBaseLinkMapped);
 }
 

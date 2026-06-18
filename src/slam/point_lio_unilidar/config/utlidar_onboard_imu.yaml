@@ -58,8 +58,9 @@
             extrinsic_R: [  0.0, -0.926, 0.376575,
                 -0.902291, -0.162370, -0.399383,
                 0.431127, -0.339771, -0.835874 ]
-        odometry: 
-            publish_odometry_without_downsample: true  
+        odometry:
+            publish_odometry_without_downsample: true
+            base_link_vel_lpf_alpha: 0.2  # /odom_base_link linear vel EMA coeff (0,1]; 1=off, smaller=smoother but more lag
 
         publish:
             path_en: false                 # false: close the path output

@@ -38,5 +38,8 @@ extern bool   runtime_pos_log, pcd_save_en, path_en;
 extern bool   scan_pub_en, scan_body_pub_en;
 extern shared_ptr<Preprocess> p_pre;
 extern double time_lag_imu_to_lidar;
+// EMA low-pass coefficient for the base_link twist linear velocity.
+// 1.0 = no filtering (raw), smaller = smoother but more lag. <=0 disables.
+extern double base_link_vel_lpf_alpha;
 
 void readParameters(rclcpp::Node::SharedPtr node);
