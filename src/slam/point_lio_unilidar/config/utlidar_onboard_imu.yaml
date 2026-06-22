@@ -61,6 +61,7 @@
         odometry:
             publish_odometry_without_downsample: true
             base_link_vel_lpf_alpha: 0.2  # /odom_base_link linear vel EMA coeff (0,1]; 1=off, smaller=smoother but more lag
+            base_link_angvel_lpf_alpha: 0.3  # /odom_base_link angular vel EMA coeff (0,1]; 1=off, smaller=smoother but more lag
 
         publish:
             path_en: false                 # false: close the path output

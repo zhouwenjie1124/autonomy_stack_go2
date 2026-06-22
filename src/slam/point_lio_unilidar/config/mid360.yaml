@@ -56,7 +56,7 @@ laserMapping:
       extrinsic_R: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] 
 
     odometry:
-      publish_odometry_without_downsample: true  # true: High frequency (200Hz,per point); false: Low frequency (10Hz,per scan),mid360 把多个点使用一个时间戳发布，所以极限只有200Hz
+      publish_odometry_without_downsample: false  # true: High frequency (200Hz,per point); false: Low frequency (10Hz,per scan),mid360 把多个点使用一个时间戳发布，所以极限只有200Hz
       base_link_vel_lpf_alpha: 0.2  # Velocity ouput low pass filter alpha (0,1]. (1=no filtering, smaller values result in smoother but more delayed velocity output)
 
     publish:

@@ -42,4 +42,8 @@ extern double time_lag_imu_to_lidar;
 // 1.0 = no filtering (raw), smaller = smoother but more lag. <=0 disables.
 extern double base_link_vel_lpf_alpha;
 
+// EMA low-pass coefficient for the base_link twist angular velocity.
+// 1.0 = no filtering (raw), smaller = smoother but more lag. <=0 disables.
+extern double base_link_angvel_lpf_alpha;
+
 void readParameters(rclcpp::Node::SharedPtr node);

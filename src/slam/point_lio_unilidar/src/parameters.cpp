@@ -23,6 +23,7 @@ bool use_imu_as_input;
 bool space_down_sample;
 bool publish_odometry_without_downsample;
 double base_link_vel_lpf_alpha;
+double base_link_angvel_lpf_alpha;
 
 int init_map_size;
 int con_frame_num;
@@ -154,6 +155,7 @@ void readParameters(rclcpp::Node::SharedPtr node)
       std::vector<double>{1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0});
   declare_and_get_parameter<bool>(node, "odometry.publish_odometry_without_downsample", publish_odometry_without_downsample, false);
   declare_and_get_parameter<double>(node, "odometry.base_link_vel_lpf_alpha", base_link_vel_lpf_alpha, 1.0);
+  declare_and_get_parameter<double>(node, "odometry.base_link_angvel_lpf_alpha", base_link_angvel_lpf_alpha, 1.0);
   declare_and_get_parameter<bool>(node, "publish.path_en", path_en, true);
   declare_and_get_parameter<bool>(node, "publish.scan_publish_en", scan_pub_en, 1);
   declare_and_get_parameter<bool>(node, "publish.scan_bodyframe_pub_en", scan_body_pub_en, 1);

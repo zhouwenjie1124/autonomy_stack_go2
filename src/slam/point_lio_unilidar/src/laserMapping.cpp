@@ -803,6 +803,31 @@ Eigen::Vector3d get_world_velocity()
         return kf_input.x_.vel;
 }
 
+// Body-frame angular velocity (rad/s), already in base/IMU frame so no
+// rotation into base_link is needed by the caller.
+//
+// Two estimation sources depending on the active filter:
+//   - output mode (use_imu_as_input == false): the KF estimates a smoothed
+//     angular-velocity state directly -> kf_output.x_.omg
+//   - input mode  (use_imu_as_input == true): there is NO omg state; the best
+//     available angular velocity is the raw gyro minus the estimated bias,
+//     i.e. input_in.gyro - kf_input.x_.bg
+Eigen::Vector3d get_body_angular_velocity()
+{
+    if (!use_imu_as_input)
+    {
+        // KF estimates a smoothed body-frame angular-velocity state directly.
+        return kf_output.x_.omg;
+    }
+    else
+    {
+        // No omg state in input mode: use the bias-corrected gyro reading.
+        // input_in.gyro is the latest gyro fed to the filter; kf_input.x_.bg
+        // is the online-estimated gyro bias.
+        return Eigen::Vector3d(input_in.gyro - kf_input.x_.bg);
+    }
+}
+
 void publish_odometry(const rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr pubOdomAftMapped)
 {
     odomAftMapped.header.frame_id = "camera_init";
@@ -877,9 +902,11 @@ void publish_odometry_base_link(const rclcpp::Publisher<nav_msgs::msg::Odometry>
     // uses its transpose/inverse.
     //
     // q_base = R_world_base, so world -> base_link uses its conjugate (= inverse for a unit quat).
-    // Angular velocity is intentionally left at zero per current design.
     Eigen::Vector3d v_world = get_world_velocity();
     Eigen::Vector3d v_base = q_base.conjugate() * v_world;
+
+    // Angular velocity is already body-frame, so it is published as-is (no rotation).
+    Eigen::Vector3d w_base = get_body_angular_velocity();
 
     // First-order EMA low-pass on the base_link linear velocity to suppress
     // the high-frequency noise of the KF velocity state (alpha in (0,1]).
@@ -900,12 +927,31 @@ void publish_odometry_base_link(const rclcpp::Publisher<nav_msgs::msg::Odometry>
         v_base = v_base_filt;
     }
 
+    // First-order EMA low-pass on the base_link angular velocity. Independent
+    // state from the linear-velocity filter so the two do not cross-contaminate.
+    static bool angvel_lpf_init = false;
+    static Eigen::Vector3d w_base_filt = Eigen::Vector3d::Zero();
+    double alpha_w = base_link_angvel_lpf_alpha;
+    if (alpha_w > 0.0 && alpha_w < 1.0)
+    {
+        if (!angvel_lpf_init)
+        {
+            w_base_filt = w_base;
+            angvel_lpf_init = true;
+        }
+        else
+        {
+            w_base_filt = alpha_w * w_base + (1.0 - alpha_w) * w_base_filt;
+        }
+        w_base = w_base_filt;
+    }
+
     odomBaseLinkMapped.twist.twist.linear.x = v_base.x();
     odomBaseLinkMapped.twist.twist.linear.y = v_base.y();
     odomBaseLinkMapped.twist.twist.linear.z = v_base.z();
-    odomBaseLinkMapped.twist.twist.angular.x = 0.0;
-    odomBaseLinkMapped.twist.twist.angular.y = 0.0;
-    odomBaseLinkMapped.twist.twist.angular.z = 0.0;
+    odomBaseLinkMapped.twist.twist.angular.x = w_base.x();
+    odomBaseLinkMapped.twist.twist.angular.y = w_base.y();
+    odomBaseLinkMapped.twist.twist.angular.z = w_base.z();
 
     pubOdomBaseLink->publish(odomBaseLinkMapped);
 }
