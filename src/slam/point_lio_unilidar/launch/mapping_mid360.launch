@@ -3,6 +3,12 @@
 	<!-- No transform_sensors node needed: Mid360 outputs data directly in its own frame.
 	     The 13-deg mounting tilt is compensated by Point-LIO's gravity_align. -->
 	<arg name="rviz" default="true" />
+	<!-- SLAM odom output topic. Set to /state_estimation_raw to splice the
+	     odom_fault_injection node in front of the autonomy stack. -->
+	<arg name="odom_topic" default="/state_estimation" />
+	<!-- Where laserMapping broadcasts its camera_init -> aft_mapped TF.
+	     Set to /tf_slam_raw so the odom_fault_injection node can own /tf. -->
+	<arg name="tf_topic" default="/tf" />
 
 	<node pkg="point_lio_unilidar" exec="pointlio_mapping" name="laserMapping" output="screen">
 		<param from="$(find-pkg-share point_lio_unilidar)/config/mid360.yaml" />
@@ -22,7 +28,8 @@
 
 		<!-- Remap to match the downstream autonomy stack topic names -->
 		<remap from="/cloud_registered" to="/registered_scan" />
-		<remap from="/aft_mapped_to_init" to="/state_estimation" />
+		<remap from="/aft_mapped_to_init" to="$(var odom_topic)" />
+		<remap from="/tf" to="$(var tf_topic)" />
 
 	</node>
 

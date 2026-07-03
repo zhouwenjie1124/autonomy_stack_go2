@@ -7,6 +7,17 @@
   <arg name="vehicleX" default="0.0"/>
   <arg name="vehicleY" default="0.0"/>
   <arg name="checkTerrainConn" default="true"/>
+  <!-- Odometry fault-injection wiring, one switch for both odom and TF.
+       true:  Point-LIO publishes /state_estimation_raw and its TF on
+              /tf_slam_raw; you MUST also launch the injector, which then
+              owns /state_estimation and the camera_init->aft_mapped TF:
+                ros2 launch odom_fault_injection state_estimation_fault.launch.py
+       false: normal direct wiring, no injector needed. -->
+  <arg name="faultInjection" default="false"/>
+  <!-- true: pathFollower drives the real Go2 via the Unitree sport API -->
+  <arg name="is_real_robot" default="false"/>
+  <!-- Input cloud for terrain_analysis (e.g. /registered_scan or /merged_scan) -->
+  <arg name="pointCloudTopic" default="/merged_scan"/>
 
   <node pkg="joy" exec="joy_node" name="ps3_joy" output="screen" >
     <param name="dev" value="/dev/input/js0" />
@@ -29,9 +40,19 @@
     <param name="user_config_path" value="$(find-pkg-share livox_ros_driver2)/config/MID360_config.json"/>
   </node>
 
-  <include file="$(find-pkg-share point_lio_unilidar)/launch/mapping_mid360.launch">
-    <arg name="rviz" value="false"/>
-  </include>
+  <group if="$(var faultInjection)">
+    <include file="$(find-pkg-share point_lio_unilidar)/launch/mapping_mid360.launch">
+      <arg name="rviz" value="false"/>
+      <arg name="odom_topic" value="/state_estimation_raw"/>
+      <arg name="tf_topic" value="/tf_slam_raw"/>
+    </include>
+  </group>
+
+  <group unless="$(var faultInjection)">
+    <include file="$(find-pkg-share point_lio_unilidar)/launch/mapping_mid360.launch">
+      <arg name="rviz" value="false"/>
+    </include>
+  </group>
 
   <include file="$(find-pkg-share local_planner)/launch/local_planner.launch" >
     <arg name="sensorOffsetX" value="$(var sensorOffsetX)" />
@@ -39,14 +60,16 @@
     <arg name="cameraOffsetZ" value="$(var cameraOffsetZ)"/>
     <arg name="goalX" value="$(var vehicleX)"/>
     <arg name="goalY" value="$(var vehicleY)"/>
+    <arg name="is_real_robot" value="$(var is_real_robot)"/>
   </include>
 
-  <include file="$(find-pkg-share terrain_analysis)/launch/terrain_analysis.launch" />
+  <include file="$(find-pkg-share terrain_analysis)/launch/terrain_analysis.launch" >
+    <arg name="pointCloudTopic" value="$(var pointCloudTopic)"/>
+  </include>
 
   <!-- go2 legacy -->
   <!-- <node pkg="transform_sensors" exec="transform_everything" name="transform_everything" output="screen" /> --> 
-
-<node pkg="unitree_lidar_fix" exec="cloud_merger" name="cloud_merger" output="screen"/>
+  <node pkg="unitree_lidar_fix" exec="cloud_merger" name="cloud_merger" output="screen"/>
 
   <!-- <include file="$(find-pkg-share terrain_analysis_ext)/launch/terrain_analysis_ext.launch" >
     <arg name="checkTerrainConn" value="$(var checkTerrainConn)"/>

@@ -11,7 +11,7 @@
   <arg name="goalCloseDis" default="0.4"/>
   <arg name="goalX" default="0.0"/>
   <arg name="goalY" default="0.0"/>
-  <arg name="is_real_robot" default="true"/>
+  <arg name="is_real_robot" default="false"/>
 
   <node pkg="local_planner" exec="localPlanner" name="localPlanner" output="screen">
     <param name="pathFolder" value="$(find-pkg-share local_planner)/paths" />

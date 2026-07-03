@@ -65,6 +65,7 @@ double voxelTimeUpdateThre = 2.0;
 double minRelZ = -1.5;
 double maxRelZ = 0.2;
 double disRatioZ = 0.2;
+string pointCloudTopic = "/merged_scan";
 
 // terrain voxel parameters
 float terrainVoxelSize = 1.0;
@@ -237,6 +238,7 @@ int main(int argc, char **argv) {
   nh->declare_parameter<double>("minRelZ", minRelZ);
   nh->declare_parameter<double>("maxRelZ", maxRelZ);
   nh->declare_parameter<double>("disRatioZ", disRatioZ);
+  nh->declare_parameter<string>("pointCloudTopic", pointCloudTopic);
 
   nh->get_parameter("scanVoxelSize", scanVoxelSize);
   nh->get_parameter("decayTime", decayTime);
@@ -269,10 +271,11 @@ int main(int argc, char **argv) {
   nh->get_parameter("minRelZ", minRelZ);
   nh->get_parameter("maxRelZ", maxRelZ);
   nh->get_parameter("disRatioZ", disRatioZ);
+  nh->get_parameter("pointCloudTopic", pointCloudTopic);
 
   auto subOdometry = nh->create_subscription<nav_msgs::msg::Odometry>("/state_estimation", 5, odometryHandler);
 
-  auto subLaserCloud = nh->create_subscription<sensor_msgs::msg::PointCloud2>("/merged_scan", 5, laserCloudHandler);
+  auto subLaserCloud = nh->create_subscription<sensor_msgs::msg::PointCloud2>(pointCloudTopic, 5, laserCloudHandler);
 
   auto subJoystick = nh->create_subscription<sensor_msgs::msg::Joy>("/joy", 5, joystickHandler);
 
